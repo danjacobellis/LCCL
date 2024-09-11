@@ -1,2 +1,1 @@
-# LCCR
-Learned Compression for Compressed Learning
+# Learned Compression for Compressed Learning

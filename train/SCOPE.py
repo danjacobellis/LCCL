@@ -11,10 +11,13 @@ from einops.layers.torch import Rearrange
 def pair(t):
     return t if isinstance(t, tuple) else (t, t)
 
-# Create 2D positional encoding with x and y coordinates
 def pos_2d_coords(h, w, dtype=torch.float32):
     y, x = torch.meshgrid(torch.arange(h, dtype=dtype), torch.arange(w, dtype=dtype), indexing="ij")
     return torch.stack((x, y), dim=-1).view(h * w, 2)
+
+def extend_pos_with_zeros(pos_embedding, num_register_tokens):
+    zeros = torch.zeros(num_register_tokens, 2, dtype=pos_embedding.dtype, device=pos_embedding.device)
+    return torch.cat((pos_embedding, zeros), dim=0)
 
 # classes
 
@@ -25,7 +28,7 @@ class FeedForward(nn.Module):
             nn.LayerNorm(dim),
             nn.Linear(dim, hidden_dim),
             nn.GELU(),
-            nn.Linear(hidden_dim, dim),
+            nn.Linear(hidden_dim, dim-2),
         )
     def forward(self, x):
         return self.net(x)
@@ -68,12 +71,12 @@ class Transformer(nn.Module):
                 FeedForward(dim, mlp_dim)
             ]))
     def forward(self, x):
-        batch, device = x.shape[0], img.device
+        batch, device = x.shape[0], x.device
         pe = repeat(self.pos_embedding, 'n d -> b n d', b=batch).to(device)
         for attn, ff in self.layers:
             x = torch.cat((x, pe), dim=-1)
             x = attn(x) + x
-            x = ff(x) + x
+            x = ff(x) + x[:,:,:-2]
         return self.norm(x)
 
 class SimpleViT(nn.Module):
@@ -95,20 +98,20 @@ class SimpleViT(nn.Module):
 
         self.register_tokens = nn.Parameter(torch.randn(num_register_tokens, dim-2))
 
-        self.pos_embedding = pos_2d_coords(image_height // patch_height, image_width // patch_width)
-
         self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim)
+        self.transformer.pos_embedding = pos_2d_coords(image_height // patch_height, image_width // patch_width)
+        self.transformer.pos_embedding = extend_pos_with_zeros(self.transformer.pos_embedding, num_register_tokens)
+
 
         self.pool = "mean"
         self.to_latent = nn.Identity()
 
-        self.linear_head = nn.Linear(dim, num_classes)
+        self.linear_head = nn.Linear(dim-2, num_classes)
 
     def forward(self, img):
         batch, device = img.shape[0], img.device
 
         x = self.to_patch_embedding(img)
-        x += self.pos_embedding.to(device, dtype=x.dtype)
 
         r = repeat(self.register_tokens, 'n d -> b n d', b = batch)
 

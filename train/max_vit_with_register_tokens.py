@@ -215,6 +215,7 @@ class MaxViT(Module):
         channels = 3,
         num_register_tokens = 4,
         downsample = True,
+        dense_prediction = False,
     ):
         super().__init__()
         assert isinstance(depth, tuple), 'depth needs to be tuple if integers indicating number of transformer blocks at that stage'
@@ -277,11 +278,18 @@ class MaxViT(Module):
 
         # mlp head out
 
-        self.mlp_head = nn.Sequential(
-            Reduce('b d h w -> b d', 'mean'),
-            nn.LayerNorm(dims[-1]),
-            nn.Linear(dims[-1], num_classes)
-        )
+        if dense_prediction:
+            self.mlp_head = nn.Sequential(
+                Rearrange('b d h w -> b (h w) d'),
+                nn.LayerNorm(dims[-1]),
+                nn.Linear(dims[-1], num_classes)
+            )
+        else:
+            self.mlp_head = nn.Sequential(
+                Reduce('b d h w -> b d', 'mean'),
+                nn.LayerNorm(dims[-1]),
+                nn.Linear(dims[-1], num_classes)
+            )
 
     def forward(self, x):
         b, w = x.shape[0], self.window_size

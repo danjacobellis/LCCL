@@ -202,6 +202,7 @@ class MaxViT(Module):
     def __init__(
         self,
         *,
+        patch_size = 2,
         num_classes,
         dim,
         depth,
@@ -212,7 +213,7 @@ class MaxViT(Module):
         mbconv_shrinkage_rate = 0.25,
         dropout = 0.1,
         channels = 3,
-        num_register_tokens = 4
+        num_register_tokens = 4,
     ):
         super().__init__()
         assert isinstance(depth, tuple), 'depth needs to be tuple if integers indicating number of transformer blocks at that stage'
@@ -223,8 +224,7 @@ class MaxViT(Module):
         dim_conv_stem = default(dim_conv_stem, dim)
 
         self.conv_stem = Sequential(
-            nn.Conv2d(channels, dim_conv_stem, 3, stride = 2, padding = 1),
-            nn.Conv2d(dim_conv_stem, dim_conv_stem, 3, padding = 1)
+            nn.Conv2d(channels, dim_conv_stem, patch_size, stride = patch_size, padding = 0),
         )
 
         # variables
@@ -253,7 +253,7 @@ class MaxViT(Module):
                 conv = MBConv(
                     stage_dim_in,
                     layer_dim,
-                    downsample = is_first,
+                    downsample = is_first if downsample else False,
                     expansion_rate = mbconv_expansion_rate,
                     shrinkage_rate = mbconv_shrinkage_rate
                 )

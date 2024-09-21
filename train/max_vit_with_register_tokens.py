@@ -214,6 +214,7 @@ class MaxViT(Module):
         dropout = 0.1,
         channels = 3,
         num_register_tokens = 4,
+        downsample = True,
     ):
         super().__init__()
         assert isinstance(depth, tuple), 'depth needs to be tuple if integers indicating number of transformer blocks at that stage'

@@ -221,6 +221,9 @@ class MaxViT(Module):
         assert isinstance(depth, tuple), 'depth needs to be tuple if integers indicating number of transformer blocks at that stage'
         assert num_register_tokens > 0
 
+        self.patch_size = patch_size
+        self.dense_prediction = dense_prediction
+
         # convolutional stem
 
         dim_conv_stem = default(dim_conv_stem, dim)
@@ -347,4 +350,9 @@ class MaxViT(Module):
             x = unpack_one(x, window_ps, 'b x y * d')
             x = rearrange(x, 'b x y w1 w2 d -> b d (w1 x) (w2 y)')
 
-        return self.mlp_head(x)
+        x = self.mlp_head(x)
+        if self.dense_prediction:
+            h = w = int(x.shape[1]**0.5)
+            pH = pW = self.patch_size
+            x = rearrange(x,'b (h w) (pH pW c) -> b c (h pH) (w pW)', h=h, w=w, pH=pH, pW=pW)
+        return x

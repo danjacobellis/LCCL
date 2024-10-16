@@ -1,6 +1,6 @@
 # Learned Compression for Compressed Learning
 
-This repository contains the code, experiments, and results accompanying the paper "Learned Compression for Compressed Learning"](https://danjacobellis.net/_static/walloc.pdf)
+This repository contains the code, experiments, and results accompanying the paper ["Learned Compression for Compressed Learning"](https://danjacobellis.net/_static/walloc.pdf)
 
 - [Paper: "Learned Compression for Compressed Learning"](https://danjacobellis.net/_static/walloc.pdf)
 - [WaLLoC repository](https://github.com/danjacobellis/walloc)
